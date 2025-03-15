@@ -1,9 +1,20 @@
-import { Injectable, HttpException, HttpStatus, OnModuleInit, Logger } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
-import { ConfigService } from '@nestjs/config';
-import { AxiosError } from 'axios';
-import { FeedContent, WikiEvent, SupportedLanguage, SUPPORTED_LANGUAGES } from './types/feed.types';
+import {
+  Injectable,
+  HttpException,
+  HttpStatus,
+  OnModuleInit,
+  Logger,
+} from "@nestjs/common";
+import { HttpService } from "@nestjs/axios";
+import { firstValueFrom } from "rxjs";
+import { ConfigService } from "@nestjs/config";
+import { AxiosError } from "axios";
+import {
+  FeedContent,
+  FeedItem,
+  SupportedLanguage,
+  SUPPORTED_LANGUAGES,
+} from "./types/feed.types";
 
 interface TranslationPayload {
   q: string;
@@ -29,25 +40,30 @@ export class TranslationService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.translateUrl = this.configService.get<string>('LIBRETRANSLATE_API_URL') || 'https://libretranslate.com/translate';
-    this.apiKey = this.configService.get<string>('LIBRETRANSLATE_API_KEY');
+    this.translateUrl =
+      this.configService.get<string>("LIBRETRANSLATE_API_URL") ||
+      "https://libretranslate.com/translate";
+    this.apiKey = this.configService.get<string>("LIBRETRANSLATE_API_KEY");
 
     this.logger.log({
-      message: 'Translation service initialized',
+      message: "Translation service initialized",
       url: this.translateUrl,
       hasApiKey: !!this.apiKey,
     });
   }
 
-  async translateContent(content: FeedContent, targetLanguage: SupportedLanguage): Promise<FeedContent> {
+  async translateContent(
+    content: FeedContent,
+    targetLanguage: SupportedLanguage,
+  ): Promise<FeedContent> {
     if (!SUPPORTED_LANGUAGES.includes(targetLanguage)) {
       throw new HttpException(
-        `Unsupported language. Supported languages: ${SUPPORTED_LANGUAGES.join(', ')}`,
+        `Unsupported language. Supported languages: ${SUPPORTED_LANGUAGES.join(", ")}`,
         HttpStatus.BAD_REQUEST,
       );
     }
 
-    if (targetLanguage === 'en') {
+    if (targetLanguage === "en") {
       return content;
     }
 
@@ -62,12 +78,17 @@ export class TranslationService implements OnModuleInit {
     };
   }
 
-  private async translateEvent(event: WikiEvent, targetLang: SupportedLanguage): Promise<WikiEvent> {
-    if (event.type === 'date_separator') {
+  private async translateEvent(
+    event: FeedItem,
+    targetLang: SupportedLanguage,
+  ): Promise<FeedItem> {
+    if (event.type === "date_separator") {
       return event;
     }
 
-    const translatedText = event.text ? await this.translateText(event.text, targetLang) : undefined;
+    const translatedText = event.text
+      ? await this.translateText(event.text, targetLang)
+      : undefined;
     const translatedPages = event.pages
       ? await Promise.all(
           event.pages.map(async (page) => ({
@@ -85,7 +106,10 @@ export class TranslationService implements OnModuleInit {
     };
   }
 
-  private async translateText(text: string, targetLang: SupportedLanguage): Promise<string> {
+  private async translateText(
+    text: string,
+    targetLang: SupportedLanguage,
+  ): Promise<string> {
     if (!text?.trim()) {
       return text;
     }
@@ -93,9 +117,9 @@ export class TranslationService implements OnModuleInit {
     try {
       const payload: TranslationPayload = {
         q: text,
-        source: 'en',
+        source: "en",
         target: targetLang,
-        format: 'text',
+        format: "text",
       };
 
       if (this.apiKey) {
@@ -105,21 +129,24 @@ export class TranslationService implements OnModuleInit {
       const response = await firstValueFrom(
         this.httpService.post<TranslationResponse>(this.translateUrl, payload, {
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           timeout: 10000,
         }),
       );
 
       if (!response.data?.translatedText) {
-        this.logger.warn('Translation response missing translatedText', response.data);
+        this.logger.warn(
+          "Translation response missing translatedText",
+          response.data,
+        );
         return text;
       }
 
       return response.data.translatedText;
     } catch (error) {
       const axiosError = error as AxiosError;
-      this.logger.error('Translation error', {
+      this.logger.error("Translation error", {
         message: axiosError.message,
         response: axiosError.response?.data,
       });
@@ -127,17 +154,19 @@ export class TranslationService implements OnModuleInit {
       if (axiosError.response?.status === 403) {
         if (this.apiKey) {
           throw new HttpException(
-            'Translation service authentication failed. Please check API key.',
+            "Translation service authentication failed. Please check API key.",
             HttpStatus.UNAUTHORIZED,
           );
         }
-        this.logger.warn('Consider adding LIBRETRANSLATE_API_KEY for better service');
+        this.logger.warn(
+          "Consider adding LIBRETRANSLATE_API_KEY for better service",
+        );
         return text;
       }
 
       if (axiosError.response?.status === 429) {
         throw new HttpException(
-          'Translation service rate limit exceeded. Please try again later.',
+          "Translation service rate limit exceeded. Please try again later.",
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
@@ -149,4 +178,4 @@ export class TranslationService implements OnModuleInit {
   getSupportedLanguages(): readonly SupportedLanguage[] {
     return SUPPORTED_LANGUAGES;
   }
-} 
+}

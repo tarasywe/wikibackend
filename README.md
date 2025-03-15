@@ -1,148 +1,61 @@
-# Wikipedia Historical Events API
+# Wikipedia Events API
 
-This is a NestJS application that provides an API to fetch historical events from Wikipedia for any given date. It supports multiple languages and different types of historical events (births, deaths, events, holidays).
+A NestJS application that provides historical events from Wikipedia with translation support.
 
-## Prerequisites
+## Features
 
-- Node.js (v16 or later)
-- npm (v8 or later)
-- Git
+- Fetch historical events for specific dates
+- Translation support for multiple languages
+- Pagination support (20 items per page)
+- Automatic caching and rate limiting
+- Swagger API documentation
 
-## Installation
+## API Endpoints
 
-1. Clone the repository:
-```bash
-git clone <your-repository-url>
-cd project
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-## Configuration
-
-You can set up your environment configuration in two ways:
-
-### Option 1: Using the Setup Script
-
-Run the provided setup script:
-```bash
-# Make the script executable
-chmod +x scripts/setup-env.sh
-
-# Run the script
-./scripts/setup-env.sh
-```
-
-The script will:
-- Check if `.env` already exists and ask before overwriting
-- Create a new `.env` file from `.env.example`
-- Display the current environment variables
-- Make the file executable
-
-### Option 2: Manual Setup
-
-1. Create a `.env` file in the root directory:
-```bash
-cp .env.example .env
-```
-
-2. Configure the environment variables in `.env`:
-```bash
-# Application
-PORT=3000                                                  # Application port
-WIKIPEDIA_API_URL=https://api.wikimedia.org/feed/v1/wikipedia  # Wikipedia API base URL
-THROTTLE_TTL=60000                                        # Rate limiting window (ms)
-THROTTLE_LIMIT=10                                         # Requests per window
-CACHE_TTL=300000                                         # Cache duration (ms)
-```
-
-3. Update the User-Agent in `src/feed/feed.service.ts` with your information:
-```typescript
-'User-Agent': 'WikiApp/1.0 (https://github.com/yourusername/wikiapp; your@email.com)'
-```
-
-## Running the Application
-
-### Development Mode
-
-For development with hot-reload:
-```bash
-npm run start:dev
-```
-
-### Debug Mode
-
-For debugging with inspector:
-```bash
-npm run start:debug
-```
-
-### Production Mode
-
-For production:
-```bash
-# Build the application
-npm run build
-
-# Start the production server
-npm run start:prod
-```
-
-The application will be available at `http://localhost:3000`
-
-## API Documentation
-
-Once the application is running, you can access the Swagger documentation at:
-```
-http://localhost:3000/api
-```
-
-### Available Endpoints
-
-#### GET /v1/feed
-
-Fetch historical events from Wikipedia.
-
-Query Parameters:
-- `type` (optional): Type of events to fetch
-  - Values: 'all', 'selected', 'births', 'deaths', 'events', 'holidays'
-  - Default: 'all'
-- `month` (optional): Month in MM format (e.g., '03')
-  - Default: current month
-- `day` (optional): Day in DD format (e.g., '15')
-  - Default: current day
-- `language` (optional): Language code
-  - Supported: 'en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'zh', 'ja', 'ar', 'uk'
-  - Default: 'en'
-
-Example Requests:
-```bash
-# Get all events for today
-curl http://localhost:3000/v1/feed
-
-# Get births on March 15 in Ukrainian
-curl http://localhost:3000/v1/feed?type=births&month=03&day=15&language=uk
-
-# Get historical events for today in Spanish
-curl http://localhost:3000/v1/feed?type=events&language=es
-```
+- `GET /v1/feed` - Get historical events with pagination
+- `GET /v1/feed/translate/:language` - Get translated historical events
+- `GET /api` - Swagger API documentation
 
 ## Development
 
-### Project Structure
+### Prerequisites
+
+- Node.js 16 or higher
+- npm or yarn
+- Git
+
+### Installation
+
+```bash
+# Clone the repository
+git clone <your-repo-url>
+
+# Install dependencies
+npm install
+
+# Create .env file
+cp .env.example .env
 ```
-src/
-├── feed/
-│   ├── dto/
-│   │   └── wikipedia-query.dto.ts
-│   ├── feed.controller.ts
-│   ├── feed.module.ts
-│   └── feed.service.ts
-├── app.module.ts
-└── main.ts
+
+### Environment Variables
+
+```env
+# API Configuration
+PORT=3000
+
+# Wikipedia API
+WIKIPEDIA_API_URL=https://api.wikimedia.org/feed/v1/wikipedia
+
+# Translation Service (optional)
+LIBRETRANSLATE_API_URL=https://libretranslate.com/translate
+LIBRETRANSLATE_API_KEY=your_api_key_here
+
+# Rate Limiting
+THROTTLE_TTL=60
+THROTTLE_LIMIT=30
+
+# Cache
+CACHE_TTL=300
 ```
 
 ### Available Scripts
@@ -155,24 +68,123 @@ src/
 - `npm run start:prod` - Start in production mode
 - `npm run lint` - Lint the code
 - `npm run test` - Run tests
-- `npm run test:watch` - Run tests in watch mode
-- `npm run test:cov` - Run tests with coverage
-- `npm run test:debug` - Run tests in debug mode
-- `npm run test:e2e` - Run end-to-end tests
+
+## Deployment to Railway
+
+### Prerequisites
+
+1. [Railway Account](https://railway.app/)
+2. [Railway CLI](https://docs.railway.app/develop/cli)
+
+### Deployment Steps
+
+1. Install Railway CLI:
+```bash
+npm i -g @railway/cli
+```
+
+2. Login to Railway:
+```bash
+railway login
+```
+
+3. Initialize your project:
+```bash
+railway init
+```
+
+4. Link your repository:
+```bash
+railway link
+```
+
+5. Deploy your application:
+```bash
+railway up
+```
+
+### Configuration
+
+The application uses the following configuration files for Railway deployment:
+
+1. `railway.toml`:
+```toml
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm run build"
+
+[deploy]
+startCommand = "npm run start:prod"
+healthcheckPath = "/v1/feed"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+numReplicas = 1
+
+[service]
+ports = [3000]
+```
+
+2. `Procfile`:
+```
+web: npm run start:prod
+```
+
+### Environment Variables in Railway
+
+Set the following environment variables in your Railway project dashboard:
+
+- `PORT` - Set automatically by Railway
+- `WIKIPEDIA_API_URL` - Wikipedia API URL
+- `LIBRETRANSLATE_API_URL` - Translation service URL (optional)
+- `LIBRETRANSLATE_API_KEY` - Translation service API key (optional)
+- `THROTTLE_TTL` - Rate limiting time window in seconds
+- `THROTTLE_LIMIT` - Maximum requests per time window
+- `CACHE_TTL` - Cache duration in seconds
+
+### Monitoring
+
+- View logs in Railway dashboard
+- Monitor application health at `/v1/feed` endpoint
+- Check API documentation at `/api` endpoint
+
+### Troubleshooting
+
+1. If deployment fails:
+   - Check Railway build logs
+   - Verify environment variables
+   - Ensure all dependencies are listed in package.json
+
+2. If application crashes:
+   - Check application logs in Railway dashboard
+   - Verify memory usage and CPU utilization
+   - Check for rate limiting or API issues
+
+3. If API returns errors:
+   - Verify Wikipedia API accessibility
+   - Check translation service configuration
+   - Monitor rate limiting status
+
+## API Documentation
+
+Visit `/api` endpoint for full Swagger documentation.
 
 ## Error Handling
 
 The API includes proper error handling for:
 - Invalid language codes
-- Invalid date formats
-- Wikipedia API errors
+- API rate limiting
 - Network issues
+- Service unavailability
 
 ## Rate Limiting
 
-The application includes rate limiting to prevent abuse:
-- 10 requests per minute per IP address
+- 30 requests per minute per IP address
+- Configurable via environment variables
 
 ## Caching
 
-Response caching is available but currently disabled. To enable it, uncomment the `@UseInterceptors(CacheInterceptor)` line in `feed.controller.ts`.
+Response caching is enabled with a default TTL of 5 minutes (300 seconds).
+
+## License
+
+MIT

@@ -1,10 +1,10 @@
-import { Controller, Get, Redirect } from '@nestjs/common';
+import { Controller, Get, Redirect } from "@nestjs/common";
 
 @Controller()
 export class AppController {
   @Get()
-  @Redirect('/api')
+  @Redirect("/api")
   redirectToApi() {
     return;
   }
-} 
+}
