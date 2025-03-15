@@ -6,17 +6,17 @@ import {
   Version,
   UseGuards,
   Param,
-} from '@nestjs/common';
-import { CacheInterceptor } from '@nestjs/cache-manager';
-import { ThrottlerGuard } from '@nestjs/throttler';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { FeedService } from './feed.service';
-import { TranslationService } from './translation.service';
-import { WikipediaQueryDto } from './dto/wikipedia-query.dto';
-import { FeedContent } from './types/feed.types';
+} from "@nestjs/common";
+import { CacheInterceptor } from "@nestjs/cache-manager";
+import { ThrottlerGuard } from "@nestjs/throttler";
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
+import { FeedService } from "./feed.service";
+import { TranslationService } from "./translation.service";
+import { WikipediaQueryDto } from "./dto/wikipedia-query.dto";
+import { FeedContent } from "./types/feed.types";
 
-@Controller('feed')
-@ApiTags('feed')
+@Controller("feed")
+@ApiTags("feed")
 @UseGuards(ThrottlerGuard)
 @UseInterceptors(CacheInterceptor)
 export class FeedController {
@@ -25,172 +25,185 @@ export class FeedController {
     private readonly translationService: TranslationService,
   ) {}
 
-  @Version('1')
+  @Version("1")
   @Get()
-  @ApiOperation({ 
-    summary: 'Get Wikipedia historical events with pagination',
-    description: 'Returns historical events starting from today, going backwards in time. Results are paginated with 20 items per page and include date separators.'
+  @ApiOperation({
+    summary: "Get Wikipedia historical events with pagination",
+    description:
+      "Returns historical events starting from today, going backwards in time. Results are paginated with 20 items per page and include date separators.",
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Historical events retrieved successfully',
+  @ApiResponse({
+    status: 200,
+    description: "Historical events retrieved successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        page: { type: 'number', example: 1 },
-        itemsPerPage: { type: 'number', example: 20 },
+        page: { type: "number", example: 1 },
+        itemsPerPage: { type: "number", example: 20 },
         events: {
-          type: 'array',
+          type: "array",
           items: {
             oneOf: [
               {
-                type: 'object',
+                type: "object",
                 properties: {
-                  type: { type: 'string', example: 'date_separator' },
-                  date: { type: 'string', example: '03/15' }
-                }
+                  type: { type: "string", example: "date_separator" },
+                  date: { type: "string", example: "03/15" },
+                },
               },
               {
-                type: 'object',
+                type: "object",
                 properties: {
-                  type: { type: 'string', example: 'event' },
-                  text: { type: 'string' },
-                  year: { type: 'number' },
+                  type: { type: "string", example: "event" },
+                  text: { type: "string" },
+                  year: { type: "number" },
                   pages: {
-                    type: 'array',
+                    type: "array",
                     items: {
-                      type: 'object',
+                      type: "object",
                       properties: {
-                        title: { type: 'string' },
-                        extract: { type: 'string' },
+                        title: { type: "string" },
+                        extract: { type: "string" },
                         thumbnail: {
-                          type: 'object',
+                          type: "object",
                           properties: {
-                            source: { type: 'string' },
-                            width: { type: 'number' },
-                            height: { type: 'number' }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        }
-      }
-    }
+                            source: { type: "string" },
+                            width: { type: "number" },
+                            height: { type: "number" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
   })
   async getFeed(@Query() query: WikipediaQueryDto) {
     return this.feedService.getFeaturedContent(query);
   }
 
-  @Version('1')
-  @Get('translate/:language')
+  @Version("1")
+  @Get("translate/:language")
   @ApiOperation({
-    summary: 'Get translated Wikipedia historical events',
-    description: 'Returns translated historical events in the specified language. Inherits all functionalities of the /feed endpoint.'
+    summary: "Get translated Wikipedia historical events",
+    description:
+      "Returns translated historical events in the specified language. Inherits all functionalities of the /feed endpoint.",
   })
   @ApiParam({
-    name: 'language',
-    description: 'Target language code for translation',
-    example: 'es',
-    schema: { type: 'string' }
+    name: "language",
+    description: "Target language code for translation",
+    example: "es",
+    schema: { type: "string" },
   })
   @ApiResponse({
     status: 200,
-    description: 'Historical events retrieved and translated successfully',
+    description: "Historical events retrieved and translated successfully",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        page: { type: 'number', example: 1 },
-        itemsPerPage: { type: 'number', example: 20 },
-        language: { type: 'string', example: 'es' },
+        page: { type: "number", example: 1 },
+        itemsPerPage: { type: "number", example: 20 },
+        language: { type: "string", example: "es" },
         events: {
-          type: 'array',
+          type: "array",
           items: {
             oneOf: [
               {
-                type: 'object',
+                type: "object",
                 properties: {
-                  type: { type: 'string', example: 'date_separator' },
-                  date: { type: 'string', example: '03/15' }
-                }
+                  type: { type: "string", example: "date_separator" },
+                  date: { type: "string", example: "03/15" },
+                },
               },
               {
-                type: 'object',
+                type: "object",
                 properties: {
-                  type: { type: 'string', example: 'event' },
-                  text: { type: 'string' },
-                  year: { type: 'number' },
+                  type: { type: "string", example: "event" },
+                  text: { type: "string" },
+                  year: { type: "number" },
                   pages: {
-                    type: 'array',
+                    type: "array",
                     items: {
-                      type: 'object',
+                      type: "object",
                       properties: {
-                        title: { type: 'string' },
-                        extract: { type: 'string' },
+                        title: { type: "string" },
+                        extract: { type: "string" },
                         thumbnail: {
-                          type: 'object',
+                          type: "object",
                           properties: {
-                            source: { type: 'string' },
-                            width: { type: 'number' },
-                            height: { type: 'number' }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        }
-      }
-    }
+                            source: { type: "string" },
+                            width: { type: "number" },
+                            height: { type: "number" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid language code',
+    description: "Invalid language code",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        statusCode: { type: 'number', example: 400 },
-        message: { 
-          type: 'string', 
-          example: 'Unsupported language. Supported languages: en, es, fr, ...' 
-        }
-      }
-    }
+        statusCode: { type: "number", example: 400 },
+        message: {
+          type: "string",
+          example: "Unsupported language. Supported languages: en, es, fr, ...",
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
-    description: 'Translation service authentication failed',
+    description: "Translation service authentication failed",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        statusCode: { type: 'number', example: 401 },
-        message: { type: 'string', example: 'Translation service authentication failed. Please check API key.' }
-      }
-    }
+        statusCode: { type: "number", example: 401 },
+        message: {
+          type: "string",
+          example:
+            "Translation service authentication failed. Please check API key.",
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 429,
-    description: 'Translation service rate limit exceeded',
+    description: "Translation service rate limit exceeded",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        statusCode: { type: 'number', example: 429 },
-        message: { type: 'string', example: 'Translation service rate limit exceeded. Please try again later.' }
-      }
-    }
+        statusCode: { type: "number", example: 429 },
+        message: {
+          type: "string",
+          example:
+            "Translation service rate limit exceeded. Please try again later.",
+        },
+      },
+    },
   })
   async getTranslatedFeed(
     @Query() query: WikipediaQueryDto,
-    @Param('targetLanguage') targetLanguage: string,
+    @Param("targetLanguage") targetLanguage: string,
   ): Promise<FeedContent> {
     const content = await this.feedService.getFeaturedContent(query);
-    return this.translationService.translateContent(content, targetLanguage as any);
+    return this.translationService.translateContent(
+      content,
+      targetLanguage as any,
+    );
   }
 }
