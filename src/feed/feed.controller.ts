@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { FeedService } from './feed.service';
 import { TranslationService } from './translation.service';
 import { WikipediaQueryDto } from './dto/wikipedia-query.dto';
+import { FeedContent } from './types/feed.types';
 
 @Controller('feed')
 @ApiTags('feed')
@@ -186,10 +187,10 @@ export class FeedController {
     }
   })
   async getTranslatedFeed(
-    @Param('language') language: string,
-    @Query() query: WikipediaQueryDto
-  ) {
+    @Query() query: WikipediaQueryDto,
+    @Param('targetLanguage') targetLanguage: string,
+  ): Promise<FeedContent> {
     const content = await this.feedService.getFeaturedContent(query);
-    return this.translationService.translateContent(content, language);
+    return this.translationService.translateContent(content, targetLanguage as any);
   }
 }

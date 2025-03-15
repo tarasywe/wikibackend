@@ -21,11 +21,16 @@ interface WikipediaErrorResponse {
 export class FeedService {
   private readonly logger = new Logger(FeedService.name);
   private readonly ITEMS_PER_PAGE = 20;
+  private readonly DEFAULT_WIKI_API_URL = 'https://api.wikimedia.org/feed/v1/wikipedia';
+  private readonly wikiApiUrl: string;
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.wikiApiUrl = this.configService.get<string>('WIKIPEDIA_API_URL') || this.DEFAULT_WIKI_API_URL;
+    this.logger.log(`Initialized with Wikipedia API URL: ${this.wikiApiUrl}`);
+  }
 
   async getFeaturedContent(query: WikipediaQueryDto): Promise<FeedContent> {
     try {
@@ -38,16 +43,15 @@ export class FeedService {
         events,
       };
     } catch (error) {
-      const axiosError = error as AxiosError<WikipediaErrorResponse>;
-      this.logger.error('Wikipedia API error', {
-        message: axiosError.message,
-        response: axiosError.response?.data,
+      this.logger.warn('Error fetching featured content', {
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
-
-      throw new HttpException(
-        `Failed to fetch Wikipedia content: ${axiosError.response?.data?.message || axiosError.message}`,
-        axiosError.response?.status || HttpStatus.BAD_GATEWAY,
-      );
+      
+      return {
+        page: query.page || 1,
+        itemsPerPage: this.ITEMS_PER_PAGE,
+        events: [],
+      };
     }
   }
 
@@ -55,25 +59,36 @@ export class FeedService {
     const events: WikiEvent[] = [];
     const currentDate = new Date();
     let hasEnoughEvents = false;
+    let retryCount = 0;
+    const maxRetries = 3;
 
-    while (!hasEnoughEvents) {
-      const formattedDate = this.formatDate(currentDate);
-      const dayEvents = await this.fetchEventsForDate(formattedDate);
-      
-      if (dayEvents.length > 0) {
-        events.push({
-          type: 'date_separator',
-          date: formattedDate,
-        });
+    while (!hasEnoughEvents && retryCount < maxRetries) {
+      try {
+        const formattedDate = this.formatDate(currentDate);
+        const dayEvents = await this.fetchEventsForDate(formattedDate);
         
-        events.push(...dayEvents);
-      }
+        if (dayEvents.length > 0) {
+          events.push({
+            type: 'date_separator',
+            date: formattedDate,
+          });
+          
+          events.push(...dayEvents);
+        }
 
-      const totalNeeded = page * this.ITEMS_PER_PAGE;
-      if (events.length >= totalNeeded) {
-        hasEnoughEvents = true;
-      } else {
-        currentDate.setDate(currentDate.getDate() - 1);
+        const totalNeeded = page * this.ITEMS_PER_PAGE;
+        if (events.length >= totalNeeded) {
+          hasEnoughEvents = true;
+        } else {
+          currentDate.setDate(currentDate.getDate() - 1);
+        }
+      } catch (error) {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          this.logger.warn(`Max retries (${maxRetries}) reached, returning available events`);
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
       }
     }
 
@@ -84,20 +99,16 @@ export class FeedService {
   }
 
   private async fetchEventsForDate(date: string): Promise<WikiEvent[]> {
-    const wikiApiUrl = this.configService.get<string>('WIKIPEDIA_API_URL');
-    if (!wikiApiUrl) {
-      throw new Error('Wikipedia API URL is not configured');
-    }
-
     try {
       const response = await firstValueFrom(
         this.httpService.get<WikipediaEventResponse>(
-          `${wikiApiUrl}/en/onthisday/events/${date}`,
+          `${this.wikiApiUrl}/en/onthisday/events/${date}`,
           {
             headers: {
-              'User-Agent': 'WikiApp/1.0 (https://github.com/yourusername/wikiapp; your@email.com)',
+              'User-Agent': 'WikiApp/1.0',
               'Accept': 'application/json',
             },
+            timeout: 5000, // 5 second timeout
           },
         ),
       );
@@ -109,11 +120,14 @@ export class FeedService {
       return response.data.events.map((event) => this.mapEvent(event));
     } catch (error) {
       const axiosError = error as AxiosError<WikipediaErrorResponse>;
-      this.logger.error('Failed to fetch events for date', {
-        date,
-        error: axiosError.message,
-        response: axiosError.response?.data,
-      });
+      if (axiosError.code === 'ECONNABORTED') {
+        this.logger.warn('Request timeout, will retry');
+      } else {
+        this.logger.warn('Failed to fetch events for date', {
+          date,
+          error: axiosError.message,
+        });
+      }
       return [];
     }
   }
