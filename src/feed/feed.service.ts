@@ -40,7 +40,8 @@ export class FeedService {
   async getFeaturedContent(query: WikipediaQueryDto): Promise<FeedContent> {
     try {
       const page = query.page || 1;
-      const events = await this.fetchEventsWithPagination(page);
+      const startDate = query.date ? this.parseDate(query.date) : new Date();
+      const events = await this.fetchEventsWithPagination(page, startDate);
 
       return {
         page,
@@ -60,9 +61,12 @@ export class FeedService {
     }
   }
 
-  private async fetchEventsWithPagination(page: number): Promise<FeedItem[]> {
+  private async fetchEventsWithPagination(
+    page: number,
+    startDate: Date,
+  ): Promise<FeedItem[]> {
     const events: FeedItem[] = [];
-    const currentDate = new Date();
+    const currentDate = startDate;
     let hasEnoughEvents = false;
     let retryCount = 0;
     const maxRetries = 3;
@@ -85,7 +89,7 @@ export class FeedService {
         if (events.length >= totalNeeded) {
           hasEnoughEvents = true;
         } else {
-          currentDate.setDate(currentDate.getDate() - 1);
+          currentDate.setDate(currentDate.getDate() + 1);
         }
       } catch (error) {
         retryCount++;
@@ -103,6 +107,14 @@ export class FeedService {
     const end = start + this.ITEMS_PER_PAGE;
 
     return events.slice(start, end);
+  }
+
+  private parseDate(dateString: string): Date {
+    const [month, day] = dateString.split("/").map(Number);
+    const date = new Date();
+    date.setMonth(month - 1);
+    date.setDate(day);
+    return date;
   }
 
   private async fetchEventsForDate(date: string): Promise<HistoricalEvent[]> {

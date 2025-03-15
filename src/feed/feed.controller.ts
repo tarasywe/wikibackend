@@ -9,7 +9,13 @@ import {
 } from "@nestjs/common";
 import { CacheInterceptor } from "@nestjs/cache-manager";
 import { ThrottlerGuard } from "@nestjs/throttler";
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from "@nestjs/swagger";
 import { FeedService } from "./feed.service";
 import { TranslationService } from "./translation.service";
 import { WikipediaQueryDto } from "./dto/wikipedia-query.dto";
@@ -28,62 +34,31 @@ export class FeedController {
   @Version("1")
   @Get()
   @ApiOperation({
-    summary: "Get Wikipedia historical events with pagination",
+    summary: "Get historical events",
     description:
-      "Returns historical events starting from today, going backwards in time. Results are paginated with 20 items per page and include date separators.",
+      "Retrieve historical events with optional pagination and start date.",
+  })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    type: Number,
+    description: "Page number for pagination (default: 1)",
+  })
+  @ApiQuery({
+    name: "date",
+    required: false,
+    type: String,
+    description: "Starting date in MM/DD format (default: current date)",
+    example: "02/14",
   })
   @ApiResponse({
     status: 200,
-    description: "Historical events retrieved successfully",
+    description: "Returns a paginated list of historical events",
     schema: {
-      type: "object",
-      properties: {
-        page: { type: "number", example: 1 },
-        itemsPerPage: { type: "number", example: 20 },
-        events: {
-          type: "array",
-          items: {
-            oneOf: [
-              {
-                type: "object",
-                properties: {
-                  type: { type: "string", example: "date_separator" },
-                  date: { type: "string", example: "03/15" },
-                },
-              },
-              {
-                type: "object",
-                properties: {
-                  type: { type: "string", example: "event" },
-                  text: { type: "string" },
-                  year: { type: "number" },
-                  pages: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        extract: { type: "string" },
-                        thumbnail: {
-                          type: "object",
-                          properties: {
-                            source: { type: "string" },
-                            width: { type: "number" },
-                            height: { type: "number" },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            ],
-          },
-        },
-      },
+      allOf: [{ $ref: "#/components/schemas/FeedContent" }],
     },
   })
-  async getFeed(@Query() query: WikipediaQueryDto) {
+  async getFeed(@Query() query: WikipediaQueryDto): Promise<FeedContent> {
     return this.feedService.getFeaturedContent(query);
   }
 
