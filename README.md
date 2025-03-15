@@ -5,15 +5,226 @@ A NestJS application that provides historical events from Wikipedia with transla
 ## Features
 
 - Fetch historical events for specific dates
-- Translation support for multiple languages
+- Start from any date in the year
 - Pagination support (20 items per page)
-- Automatic caching and rate limiting
-- Swagger API documentation
+- Translation support for multiple languages
+- Caching for improved performance
+- Rate limiting for API protection
+
+## API Documentation
+
+### Get Historical Events
+
+```
+GET /v1/feed
+```
+
+Query Parameters:
+- `page` (optional): Page number for pagination (default: 1)
+- `date` (optional): Starting date in MM/DD format (default: current date)
+
+Examples:
+```bash
+# Get events for today
+curl http://localhost:3000/v1/feed
+
+# Get events for Valentine's Day (February 14)
+curl http://localhost:3000/v1/feed?date=02/14
+
+# Get events for Christmas (December 25)
+curl http://localhost:3000/v1/feed?date=12/25
+
+# Get second page of events for Independence Day (July 4)
+curl http://localhost:3000/v1/feed?date=07/04&page=2
+
+# Get events for New Year's Day with translation to Spanish
+curl http://localhost:3000/v1/feed/translate/es?date=01/01
+```
+
+Note: Date format must be MM/DD (e.g., 03/15 for March 15)
+
+### Get Translated Events
+
+```
+GET /v1/feed/translate/:language
+```
+
+Parameters:
+- `language`: Target language code (e.g., 'es', 'fr', 'de')
+- `page` (optional): Page number for pagination (default: 1)
+- `date` (optional): Starting date in MM/DD format (default: current date)
+
+Example:
+```bash
+# Get Spanish translation of events starting from April 1st
+curl http://localhost:3000/v1/feed/translate/es?date=04/01
+```
+
+Response Format:
+```typescript
+interface FeedContent {
+  page: number;
+  itemsPerPage: number;
+  events: Array<DateSeparator | HistoricalEvent>;
+}
+
+interface DateSeparator {
+  type: 'date_separator';
+  date: string; // Format: MM/DD
+}
+
+interface HistoricalEvent {
+  type: 'event';
+  text: string;
+  year: number;
+  pages: WikipediaPage[];
+}
+
+interface WikipediaPage {
+  title: string;
+  extract: string;
+  thumbnail?: {
+    source: string;
+    width: number;
+    height: number;
+  };
+}
+```
+
+Example Response:
+```json
+{
+  "page": 1,
+  "itemsPerPage": 20,
+  "events": [
+    {
+      "type": "date_separator",
+      "date": "03/15"
+    },
+    {
+      "type": "event",
+      "text": "44 BC – Julius Caesar is assassinated by a group of Roman senators.",
+      "year": -44,
+      "pages": [
+        {
+          "title": "Julius Caesar",
+          "extract": "Gaius Julius Caesar was a Roman general and statesman...",
+          "thumbnail": {
+            "source": "https://example.com/caesar.jpg",
+            "width": 800,
+            "height": 600
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Supported Languages
+
+The translation endpoint supports the following languages:
+- English (en)
+- Spanish (es)
+- French (fr)
+- German (de)
+- Italian (it)
+- Portuguese (pt)
+- Russian (ru)
+- Japanese (ja)
+- Chinese (zh)
 
 ## API Endpoints
 
-- `GET /v1/feed` - Get historical events with pagination
-- `GET /v1/feed/translate/:language` - Get translated historical events
+### Get Translated Events
+```
+GET /v1/feed/translate/:language
+```
+
+Parameters:
+- `language`: Target language code (e.g., 'es', 'fr', 'de')
+- `page` (optional): Page number for pagination (default: 1)
+
+Supported Languages:
+- en (English)
+- es (Spanish)
+- fr (French)
+- de (German)
+- it (Italian)
+- pt (Portuguese)
+- ru (Russian)
+- zh (Chinese)
+- ja (Japanese)
+- ar (Arabic)
+- uk (Ukrainian)
+
+Example Requests:
+```bash
+# Get events in Spanish
+curl https://your-app.railway.app/v1/feed/translate/es
+
+# Get second page of events in French
+curl https://your-app.railway.app/v1/feed/translate/fr?page=2
+```
+
+### Response Format
+```typescript
+interface FeedContent {
+  page: number;          // Current page number
+  itemsPerPage: number;  // Items per page (20)
+  language?: string;     // Target language (for translations)
+  events: Array<{
+    // Date separator
+    type: 'date_separator';
+    date: string;        // Format: "MM/DD"
+  } | {
+    // Historical event
+    type: 'event';
+    text: string;        // Event description
+    year: number;        // Year of the event
+    pages?: Array<{      // Related Wikipedia pages
+      title: string;     // Page title
+      extract: string;   // Short description
+      thumbnail?: {      // Optional thumbnail image
+        source: string;  // Image URL
+        width: number;   // Image width
+        height: number;  // Image height
+      };
+    }>;
+  }>;
+}
+```
+
+Example Response:
+```json
+{
+  "page": 1,
+  "itemsPerPage": 20,
+  "events": [
+    {
+      "type": "date_separator",
+      "date": "03/15"
+    },
+    {
+      "type": "event",
+      "text": "44 BC - Julius Caesar is assassinated by Brutus, Cassius and several other Roman senators on the Ides of March",
+      "year": -44,
+      "pages": [
+        {
+          "title": "Assassination of Julius Caesar",
+          "extract": "Julius Caesar, the Roman dictator, was assassinated by a group of senators on the Ides of March (15 March) of 44 BC during a meeting of the Senate at the Theatre of Pompey.",
+          "thumbnail": {
+            "source": "https://example.com/image.jpg",
+            "width": 800,
+            "height": 600
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
 - `GET /api` - Swagger API documentation
 
 ## Development
