@@ -25,4 +25,17 @@ export class WikipediaQueryDto {
     example: "03/15",
   })
   date?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-z]{2}$/, {
+    message: "Language must be a 2-letter code (e.g., en, es, fr)",
+  })
+  @ApiPropertyOptional({
+    description:
+      "Language code for Wikipedia content (e.g., en, es, fr). Defaults to en",
+    example: "en",
+    enum: ["en", "es", "fr", "de", "it", "pt", "ru", "ja", "zh", "uk"],
+  })
+  language?: string;
 }

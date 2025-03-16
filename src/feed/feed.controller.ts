@@ -36,7 +36,7 @@ export class FeedController {
   @ApiOperation({
     summary: "Get historical events",
     description:
-      "Retrieve historical events with optional pagination and start date.",
+      "Retrieve historical events with optional pagination, start date, and language selection.",
   })
   @ApiQuery({
     name: "page",
@@ -50,6 +50,14 @@ export class FeedController {
     type: String,
     description: "Starting date in MM/DD format (default: current date)",
     example: "02/14",
+  })
+  @ApiQuery({
+    name: "language",
+    required: false,
+    type: String,
+    description: "Language code for Wikipedia content (default: en)",
+    example: "en",
+    enum: ["en", "es", "fr", "de", "it", "pt", "ru", "ja", "zh", "uk"],
   })
   @ApiResponse({
     status: 200,

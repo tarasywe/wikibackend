@@ -40,12 +40,18 @@ export class FeedService {
   async getFeaturedContent(query: WikipediaQueryDto): Promise<FeedContent> {
     try {
       const page = query.page || 1;
+      const language = query.language || "en";
       const startDate = query.date ? this.parseDate(query.date) : new Date();
-      const events = await this.fetchEventsWithPagination(page, startDate);
+      const events = await this.fetchEventsWithPagination(
+        page,
+        startDate,
+        language,
+      );
 
       return {
         page,
         itemsPerPage: this.ITEMS_PER_PAGE,
+        language,
         events,
       };
     } catch (error) {
@@ -56,6 +62,7 @@ export class FeedService {
       return {
         page: query.page || 1,
         itemsPerPage: this.ITEMS_PER_PAGE,
+        language: query.language || "en",
         events: [],
       };
     }
@@ -64,6 +71,7 @@ export class FeedService {
   private async fetchEventsWithPagination(
     page: number,
     startDate: Date,
+    language: string,
   ): Promise<FeedItem[]> {
     const events: FeedItem[] = [];
     const currentDate = startDate;
@@ -74,7 +82,10 @@ export class FeedService {
     while (!hasEnoughEvents && retryCount < maxRetries) {
       try {
         const formattedDate = this.formatDate(currentDate);
-        const dayEvents = await this.fetchEventsForDate(formattedDate);
+        const dayEvents = await this.fetchEventsForDate(
+          formattedDate,
+          language,
+        );
 
         if (dayEvents.length > 0) {
           const dateSeparator: DateSeparator = {
@@ -117,11 +128,14 @@ export class FeedService {
     return date;
   }
 
-  private async fetchEventsForDate(date: string): Promise<HistoricalEvent[]> {
+  private async fetchEventsForDate(
+    date: string,
+    language: string,
+  ): Promise<HistoricalEvent[]> {
     try {
       const response = await firstValueFrom(
         this.httpService.get<WikipediaEventResponse>(
-          `${this.wikiApiUrl}/en/onthisday/events/${date}`,
+          `${this.wikiApiUrl}/${language}/onthisday/events/${date}`,
           {
             headers: {
               "User-Agent": "WikiApp/1.0",
@@ -144,6 +158,7 @@ export class FeedService {
       } else {
         this.logger.warn("Failed to fetch events for date", {
           date,
+          language,
           error: axiosError.message,
         });
       }
